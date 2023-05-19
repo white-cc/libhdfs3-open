@@ -163,7 +163,11 @@ namespace Internal
 
             void initReadTaskNoDelay();
 
+            void handleSendHeaderOp();
+
             void handleSendReadOp();
+
+            void handleReceiveSendHeaderOp(error_code ec, size_t length);
 
             void handleReceiveReadOp(error_code ec, size_t length);
 

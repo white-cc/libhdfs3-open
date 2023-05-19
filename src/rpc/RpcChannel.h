@@ -32,6 +32,7 @@
 #include "ExceptionInternal.h"
 #include "IpcConnectionContext.pb.h"
 #include "Memory.h"
+#include "RpcAuth.h"
 #include "network/BufferedSocketReader.h"
 #include "network/TcpSocket.h"
 #include "RpcCall.h"
@@ -145,6 +146,8 @@ public:
     }
 
     virtual void Ping();
+
+    static WriteBuffer getConnectionHeaderBuffer(const RpcAuth& auth);
 
 private:
     /**

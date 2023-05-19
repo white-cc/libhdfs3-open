@@ -753,12 +753,19 @@ void RpcChannelImpl::waitForExit() {
  * |  AuthProtocol (1 byte)           |
  * +----------------------------------+
  */
-void RpcChannelImpl::sendConnectionHeader(const RpcAuth &auth) {
+
+WriteBuffer RpcChannelImpl::getConnectionHeaderBuffer(const RpcAuth &auth)
+{
     WriteBuffer buffer;
     buffer.write(RPC_HEADER_MAGIC, strlen(RPC_HEADER_MAGIC));
     buffer.write(static_cast<char>(RPC_HEADER_VERSION));
     buffer.write(static_cast<char>(0));  //for future feature
     buffer.write(static_cast<char>(auth.getProtocol()));
+    return buffer;
+}
+
+void RpcChannelImpl::sendConnectionHeader(const RpcAuth &auth) {
+    WriteBuffer buffer = RpcChannelImpl::getConnectionHeaderBuffer(auth);
     std::string data;
     int length = buffer.getDataSize(0);
     data.resize(length);

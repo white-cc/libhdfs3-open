@@ -19,6 +19,8 @@
 
 #include "AsyncPReaderCallback.h"
 #include <algorithm>
+#include <chrono>
+#include <cstring>
 #include <memory>
 #include <thread>
 #include <tuple>
@@ -28,6 +30,7 @@
 #include "Logger.h"
 #include "client/DataTransferProtocolSender.h"
 #include "client/Metrics.h"
+#include "rpc/RpcChannel.h"
 namespace Hdfs
 {
 namespace Internal
@@ -267,12 +270,39 @@ namespace Internal
                         // set no delay.
                         tcpStream->expires_never();
                         tcpStream->socket().set_option(boost::asio::ip::tcp::no_delay(true));
+                        handleSendHeaderOp();
                         handleSendReadOp();
                     });
                 }
             }
             ExceptionGuardEnd
         }
+
+        void AsyncPReaderV2::handleSendHeaderOp()
+        {
+            try
+            {
+                LOG(DEBUG2, "[AsyncPReaderV2] handleSendHeaderOp");
+                auto self = shared_from_this();
+                WriteBuffer wb = RpcChannelImpl::getConnectionHeaderBuffer(RpcAuth(AuthMethod::SIMPLE));
+                int size = wb.getDataSize(0);
+                std::string header_data;
+                header_data.resize(size);
+                memcpy(&header_data[0], wb.getBuffer(0), size);
+                auto buf = boost::asio::buffer(header_data, size);
+                tcpStream->expires_after(std::chrono::milliseconds(conf->getInputConnTimeout()));
+                bnet::async_write(*tcpStream, buf, [this, self](error_code ec, size_t length) {
+                    tcpStream->expires_never();
+                    handleReceiveSendHeaderOp(ec, length);
+                });
+            }
+            catch (...)
+            {
+                LOG(WARNING, "[AsyncPReaderV2] handleSendHeaderOp FAILED");
+            }
+        }
+
+        void AsyncPReaderV2::handleReceiveSendHeaderOp(error_code, size_t) { LOG(DEBUG2, "[AsyncPReaderV2] handleReceiveSendHeaderOp"); }
 
         void AsyncPReaderV2::handleSendReadOp()
         {
